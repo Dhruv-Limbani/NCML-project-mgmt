@@ -9,7 +9,7 @@ from db_service.mongodb_service import conn
 
 # models and schemas
 from models.project import Project
-from schemas.project import projectEntity
+from schemas.project import projectEntity, projectsEntity
 
 # utilities
 from utils.utils import check_db_connection, is_authorized, create_files, update_files, delete_files
@@ -17,9 +17,28 @@ from utils.utils import check_db_connection, is_authorized, create_files, update
 
 project_router = APIRouter()
 
+@project_router.get('/all', tags=['project'],
+    responses={
+        200: {"description": "Projects Retrieved Successfully!"},
+        400: {"description": "Bad Request!"},
+        500: {"description": "Database Not Live!"}
+    },
+    description="This endpoint retrieves all the projects of the given user."
+)
+async def get_projects(email: str):
+
+    check_db_connection(conn)
+
+    projects =  conn.local.projects.find({"email": email})
+
+    if projects is None:
+        raise HTTPException(status_code=400, detail="Projects not found!")
+
+    return projectsEntity(projects)
+
 @project_router.get('/', tags=['project'],
     responses={
-        201: {"description": "Project Retrieval Successful!"},
+        200: {"description": "Project Retrieval Successful!"},
         400: {"description": "Bad Request!"},
         500: {"description": "Database Not Live!"}
     },
@@ -38,7 +57,7 @@ async def get_project(name: str, email: str):
 
 @project_router.post("/", tags=["project"],
     responses = {
-        201: {"description": "Project Creation Successful!"},
+        200: {"description": "Project Creation Successful!"},
         400: {"description": "Bad Request!"},
         500: {"description": "Database Not Live!"}
     },
@@ -57,7 +76,7 @@ async def create_project(project: Project, email: str):
         project = create_files(project, email)
 
         conn.local.projects.insert_one(dict(project))
-        return JSONResponse({"message": "Project creation successful!"}, status_code=201)
+        return JSONResponse({"message": "Project creation successful!"}, status_code=200)
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -106,7 +125,7 @@ async def update_project(new: Project, name: str, email: str):
 
 @project_router.delete("/", tags=["project"],
     responses={
-        204: {"description": "Project deletion successful!"},
+        200: {"description": "Project deletion successful!"},
         404: {"description": "Project not found!"},
         500: {"description": "Database Not Live!"}
     },
