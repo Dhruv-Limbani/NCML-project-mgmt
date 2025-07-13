@@ -101,6 +101,9 @@ async def update_project(new: Project, name: str, email: str):
     if conn.local.projects.find_one({"email": email, "name": name}) is None:
         raise HTTPException(status_code=400, detail="Project does not exists!")
 
+    if new.name != name and conn.local.projects.find_one({"email": email, "name": new.name}) is not None:
+        raise HTTPException(status_code=400, detail=f"A project with name: {new.name} already exists under this email!")
+
     try:
         new = update_files(new, name, email)
         update_data = {k: v for k, v in dict(new).items() if k not in ["_id", "email"]}
@@ -116,8 +119,8 @@ async def update_project(new: Project, name: str, email: str):
 
         return JSONResponse({"message": "Project updated successfully", "updated details": projectEntity(updated_project)}, status_code=200)
 
-    except DuplicateKeyError:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="A project with this name already exists under this email")
+    # except DuplicateKeyError:
+    #     raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="A project with this name already exists under this email")
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -136,7 +139,7 @@ async def delete_project(name: str, email: str):
     check_db_connection(conn)
 
     deleted_project = conn.local.projects.find_one_and_delete({"email": email, "name": name})
-
+    # delete from datasets and pipeline as well (later on)
     if not deleted_project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 

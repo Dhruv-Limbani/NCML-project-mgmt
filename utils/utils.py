@@ -37,6 +37,12 @@ def create_files(project: Project, email: str):
     base_dir = os.path.join(STORAGE_LOC, email, project.name)
     os.makedirs(base_dir, exist_ok=True)
 
+    datasets_dir = os.path.join(STORAGE_LOC, email, project.name, "datasets")
+    pipelines_dir = os.path.join(STORAGE_LOC, email, project.name, "pipelines")
+
+    os.makedirs(datasets_dir, exist_ok=True)
+    os.makedirs(pipelines_dir, exist_ok=True)
+
     notes_loc = os.path.join(email, project.name, "notes.txt")
     logs_loc = os.path.join(email, project.name, "logs.txt")
 
@@ -48,13 +54,28 @@ def create_files(project: Project, email: str):
 
     return project
 
+def move_directory_contents(source_dir, destination_dir):
+    if not os.path.exists(source_dir):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project Not Found!")
+
+    os.makedirs(destination_dir, exist_ok=True)
+
+    for item in os.listdir(source_dir):
+        source_item_path = os.path.join(source_dir, item)
+        destination_item_path = os.path.join(destination_dir, item)
+        shutil.move(source_item_path, destination_item_path)
+
+    shutil.rmtree(source_dir)
+
 def update_files(project: Project, name: str, email: str):
     base_dir = os.path.join(STORAGE_LOC, email, project.name)
     os.makedirs(base_dir, exist_ok=True)
 
     if project.name != name:
-        path = os.path.join(STORAGE_LOC, email, name)
-        shutil.rmtree(path, ignore_errors=True)
+        source = os.path.join(STORAGE_LOC, email, name)
+        destination = os.path.join(STORAGE_LOC, email, project.name)
+        move_directory_contents(source, destination)
+        ## new project name should be under location in datasets and models db
 
     notes_loc = os.path.join(email, project.name, "notes.txt")
     logs_loc = os.path.join(email, project.name, "logs.txt")
